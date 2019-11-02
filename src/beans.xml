@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+	<!-- 启动spring注解 -->
+	<context:annotation-config/>
+	<!-- 启动aop注解[个人建议]proxy-target-class="true"启动代理类 -->
+	<aop:aspectj-autoproxy proxy-target-class="true"/>
+	<!-- 扫描注解所在的包 -->
+	<context:component-scan base-package="com.shxt">
+		<context:exclude-filter type="annotation" expression="org.springframework.web.bind.annotation.ControllerAdvice"/>
+		<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+	</context:component-scan>
+	<!-- 加载属性文件 -->
+	<context:property-placeholder location="classpath:/jdbc.properties"/>
+	<!-- 配置数据源 -->
+	 <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" destroy-method="close">
+        <property name="driverClassName" value="${jdbc.mysql.driver}"/>
+        <property name="url" value="${jdbc.mysql.url}"/>
+        <property name="username" value="${jdbc.mysql.username}"/>
+        <property name="password" value="${jdbc.mysql.password}"/>
+    </bean>
+    <bean class="org.mybatis.spring.SqlSessionFactoryBean" id="sqlSessionFactoryBean">
+    	<!-- 加载mybatis核心配置文件 -->
+    	<property name="configLocation" value="classpath:/mybatis-config.xml"></property>
+    	<!-- 加载映射文件 -->
+    	<property name="mapperLocations" value="classpath*:/com/**/model/*Mapper.xml"></property>
+    	<!-- 配置数据源 -->
+    	<property name="dataSource" ref="dataSource"></property>
+    </bean>
+    <!-- 接口代理的配置 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+    	<property name="basePackage">
+    		<value>
+    			com.**.mapper
+    		</value>
+    	</property>
+    	<property name="sqlSessionFactoryBeanName" value="sqlSessionFactoryBean"></property>
+    </bean>
+    <!--  配置事务管理器 -->
+    <bean class="org.springframework.jdbc.datasource.DataSourceTransactionManager" id="transactionManager">
+    	<property name="dataSource" ref="dataSource"></property>
+    </bean>
+    <!-- 通知哪些方法需要事务 -->
+    <tx:advice id="methodAdvice" transaction-manager="transactionManager">
+    	<tx:attributes>
+    		<tx:method name="*"/>
+    	</tx:attributes>
+    </tx:advice>
+    <!-- 通知那个层次方法需要事务 -->
+    <aop:config>
+    	<aop:pointcut expression="execution(* com..service.*.*(..))" id="serviceMethodPointcut"/>
+    	<aop:advisor advice-ref="methodAdvice" pointcut-ref="serviceMethodPointcut"/>
+    </aop:config>
+    <!--  实例化jdbcTemplate -->
+    <bean class="org.springframework.jdbc.core.JdbcTemplate" id="jdbcTemplate">
+    	<property name="dataSource" ref="dataSource"></property>
+    </bean>
+</beans>
